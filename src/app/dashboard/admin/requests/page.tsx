@@ -1,88 +1,47 @@
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { getAdminCenter } from '@/lib/get-admin-center'
 import { RequestsClient } from './requests-client'
-import { redirect } from 'next/navigation'
+import { AlertTriangle } from 'lucide-react'
 
 export default async function AdminRequestsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const center = await getAdminCenter()
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  const requestsQuery = supabase
+    .from('blood_requests')
+    .select(`
+      *,
+      requester:profiles(id, full_name, email, phone, blood_type),
+      center:blood_centers(id, name, city)
+    `)
+    .order('created_at', { ascending: false })
 
-  if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
-    redirect('/dashboard/user')
+  // Scope to center — but also show unassigned pending requests
+  // so admin can pick them up
+  if (center) {
+    requestsQuery.or(`center_id.eq.${center.id},and(center_id.is.null,status.eq.pending)`)
   }
 
-  const adminClient = createAdminClient()
-
-  const [
-    { data: baseRequests, error: requestsError },
-    { data: centers },
-  ] = await Promise.all([
-    adminClient
-      .from('blood_requests')
-      .select('*')
-      .order('created_at', { ascending: false }),
-    adminClient
-      .from('blood_centers')
-      .select('id, name, city')
-      .eq('is_active', true),
+  const [{ data: requests }, { data: centers }] = await Promise.all([
+    requestsQuery,
+    supabase.from('blood_centers').select('id, name, city').eq('is_active', true),
   ])
-
-  if (requestsError) {
-    console.error('Failed to fetch blood requests:', requestsError.message)
-  }
-
-  const requesterIds = Array.from(
-    new Set((baseRequests ?? []).map(r => r.requester_id).filter(Boolean))
-  )
-  const centerIds = Array.from(
-    new Set((baseRequests ?? []).map(r => r.center_id).filter(Boolean))
-  )
-
-  const [{ data: requesters }, { data: requestCenters }] = await Promise.all([
-    requesterIds.length > 0
-      ? adminClient
-          .from('profiles')
-          .select('id, full_name, email, phone, blood_type')
-          .in('id', requesterIds)
-      : Promise.resolve({ data: [] as {
-          id: string
-          full_name: string
-          email: string
-          phone: string | null
-          blood_type: string | null
-        }[] }),
-    centerIds.length > 0
-      ? adminClient
-          .from('blood_centers')
-          .select('id, name, city')
-          .in('id', centerIds)
-      : Promise.resolve({ data: [] as {
-          id: string
-          name: string
-          city: string
-        }[] }),
-  ])
-
-  const requesterMap = new Map((requesters ?? []).map(r => [r.id, r]))
-  const centerMap = new Map((requestCenters ?? []).map(c => [c.id, c]))
-  const requests = (baseRequests ?? []).map(r => ({
-    ...r,
-    requester: r.requester_id ? requesterMap.get(r.requester_id) ?? null : null,
-    center: r.center_id ? centerMap.get(r.center_id) ?? null : null,
-  }))
 
   return (
-    <RequestsClient
-      requests={requests ?? []}
-      centers={centers ?? []}
-      isSuperAdmin={profile.role === 'super_admin'}
-    />
+    <div className="space-y-0">
+      {center && (
+        <div className="px-6 lg:px-8 pt-6 pb-2 flex items-center gap-2">
+          <AlertTriangle size={14} className="text-primary" />
+          <span className="text-sm text-muted-foreground">
+            Showing requests for <strong className="text-foreground">{center.name}</strong> + unassigned pending requests
+          </span>
+        </div>
+      )}
+      <RequestsClient
+        requests={requests ?? []}
+        centers={centers ?? []}
+        isSuperAdmin={false}
+      />
+    </div>
   )
 }
