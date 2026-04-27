@@ -11,7 +11,8 @@ export default async function ManageAdminsPage() {
     supabase
       .from('profiles')
       .select('*')
-      .eq('role', 'admin')
+      .in('role', ['admin', 'super_admin'])
+      .order('role', { ascending: false })
       .order('created_at', { ascending: false }),
     supabase
       .from('blood_centers')

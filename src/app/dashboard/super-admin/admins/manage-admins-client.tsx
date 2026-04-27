@@ -6,7 +6,7 @@ import {
   UserCog, Plus, Search, MoreHorizontal,
   Pencil, Trash2, PowerOff, Power,
   Building2, Phone, MapPin, Mail,
-  Loader2, ShieldCheck, ShieldOff
+  Loader2, ShieldCheck, ShieldOff, Shield
 } from 'lucide-react'
 import { createAdmin, toggleAdminStatus, deleteAdmin, updateAdmin } from '@/app/actions/admin-actions'
 import { Button } from '@/components/ui/button'
@@ -60,6 +60,7 @@ const EMPTY_FORM = {
   phone: '',
   location: '',
   center_id: '',
+  role: 'admin' as 'admin' | 'super_admin',
 }
 
 export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps) {
@@ -73,6 +74,9 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
 
   const updateForm = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }))
+
+  const superAdmins   = admins.filter(a => a.role === 'super_admin')
+  const regularAdmins = admins.filter(a => a.role === 'admin')
 
   const filtered = admins.filter((a) =>
     a.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -100,11 +104,14 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
         phone: form.phone,
         location: form.location,
         center_id: form.center_id || undefined,
+        role: form.role,
       })
       if (result.error) {
         toast.error(result.error)
       } else {
-        toast.success(`Admin account created for ${form.full_name}`)
+        toast.success(
+          `${form.role === 'super_admin' ? 'Super Admin' : 'Admin'} account created for ${form.full_name}`
+        )
         setShowCreate(false)
         setForm(EMPTY_FORM)
       }
@@ -123,7 +130,7 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
       if (result.error) {
         toast.error(result.error)
       } else {
-        toast.success('Admin updated successfully')
+        toast.success('Updated successfully')
         setShowEdit(false)
         setSelectedAdmin(null)
       }
@@ -136,7 +143,7 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
       if (result.error) {
         toast.error(result.error)
       } else {
-        toast.success(`Admin ${admin.is_active ? 'deactivated' : 'activated'} successfully`)
+        toast.success(`Account ${admin.is_active ? 'deactivated' : 'activated'}`)
       }
     })
   }
@@ -148,7 +155,7 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
       if (result.error) {
         toast.error(result.error)
       } else {
-        toast.success('Admin account deleted')
+        toast.success('Account deleted')
         setShowDelete(false)
         setSelectedAdmin(null)
       }
@@ -165,6 +172,7 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
       phone: admin.phone ?? '',
       location: admin.location ?? '',
       center_id: center?.id ?? '',
+      role: admin.role as 'admin' | 'super_admin',
     })
     setShowEdit(true)
   }
@@ -176,6 +184,7 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
+
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
@@ -184,12 +193,17 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
             Manage Admins
           </h1>
           <p className="text-muted-foreground mt-1">
-            {admins.length} admin{admins.length !== 1 ? 's' : ''} · {admins.filter(a => a.is_active).length} active
+            {superAdmins.length} super admin{superAdmins.length !== 1 ? 's' : ''} ·{' '}
+            {regularAdmins.length} admin{regularAdmins.length !== 1 ? 's' : ''} ·{' '}
+            {admins.filter(a => a.is_active).length} active
           </p>
         </div>
-        <Button onClick={() => { setForm(EMPTY_FORM); setShowCreate(true) }} className="gap-2">
+        <Button
+          onClick={() => { setForm(EMPTY_FORM); setShowCreate(true) }}
+          className="gap-2"
+        >
           <Plus size={16} />
-          Add Admin
+          Add Account
         </Button>
       </div>
 
@@ -204,13 +218,13 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
         />
       </div>
 
-      {/* Stats row */}
+      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Admins',   value: admins.length,                              color: 'bg-purple-50 text-purple-700 border-purple-100' },
-          { label: 'Active',         value: admins.filter(a => a.is_active).length,     color: 'bg-green-50 text-green-700 border-green-100' },
-          { label: 'Inactive',       value: admins.filter(a => !a.is_active).length,    color: 'bg-red-50 text-red-700 border-red-100' },
-          { label: 'With Centers',   value: admins.filter(a => getAdminCenter(a.id)).length, color: 'bg-blue-50 text-blue-700 border-blue-100' },
+          { label: 'Super Admins', value: superAdmins.length,                              color: 'bg-purple-50 text-purple-700 border-purple-100' },
+          { label: 'Admins',       value: regularAdmins.length,                            color: 'bg-orange-50 text-orange-700 border-orange-100' },
+          { label: 'Active',       value: admins.filter(a => a.is_active).length,          color: 'bg-green-50 text-green-700 border-green-100' },
+          { label: 'With Centers', value: admins.filter(a => getAdminCenter(a.id)).length, color: 'bg-blue-50 text-blue-700 border-blue-100' },
         ].map((stat) => (
           <div key={stat.label} className={`rounded-xl border p-4 ${stat.color}`}>
             <p className="text-2xl font-bold">{stat.value}</p>
@@ -219,11 +233,11 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
         ))}
       </div>
 
-      {/* Admin Cards Grid */}
+      {/* Cards */}
       {filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <UserCog size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No admins found</p>
+          <p className="font-medium">No accounts found</p>
           <p className="text-sm mt-1">
             {search ? 'Try a different search term' : 'Create your first admin account'}
           </p>
@@ -231,8 +245,10 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filtered.map((admin) => {
-            const center = getAdminCenter(admin.id)
+            const center   = getAdminCenter(admin.id)
             const initials = admin.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+            const isSuperAdmin = admin.role === 'super_admin'
+
             return (
               <div
                 key={admin.id}
@@ -244,7 +260,11 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <Avatar className="w-11 h-11">
-                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
+                      <AvatarFallback className={`font-bold text-sm ${
+                        isSuperAdmin
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'bg-primary/10 text-primary'
+                      }`}>
                         {initials}
                       </AvatarFallback>
                     </Avatar>
@@ -253,15 +273,21 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
                       <p className="text-xs text-muted-foreground">{admin.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge
                       variant="outline"
-                      className={admin.is_active
-                        ? 'bg-green-50 text-green-700 border-green-200 text-xs'
-                        : 'bg-gray-100 text-gray-500 border-gray-200 text-xs'
+                      className={
+                        isSuperAdmin
+                          ? 'bg-purple-50 text-purple-700 border-purple-200 text-xs'
+                          : admin.is_active
+                          ? 'bg-green-50 text-green-700 border-green-200 text-xs'
+                          : 'bg-gray-100 text-gray-500 border-gray-200 text-xs'
                       }
                     >
-                      {admin.is_active ? 'Active' : 'Inactive'}
+                      {isSuperAdmin
+                        ? <><Shield size={9} className="mr-1 inline" />Super Admin</>
+                        : admin.is_active ? 'Active' : 'Inactive'
+                      }
                     </Badge>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -270,7 +296,10 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem onClick={() => openEdit(admin)} className="cursor-pointer">
+                        <DropdownMenuItem
+                          onClick={() => openEdit(admin)}
+                          className="cursor-pointer"
+                        >
                           <Pencil size={14} className="mr-2" /> Edit details
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -296,44 +325,56 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
                 </div>
 
                 {/* Details */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {admin.phone && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Phone size={12} className="flex-shrink-0" />
+                      <Phone size={11} className="flex-shrink-0" />
                       <span>{admin.phone}</span>
                     </div>
                   )}
                   {admin.location && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <MapPin size={12} className="flex-shrink-0" />
+                      <MapPin size={11} className="flex-shrink-0" />
                       <span>{admin.location}</span>
                     </div>
                   )}
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Mail size={12} className="flex-shrink-0" />
+                    <Mail size={11} className="flex-shrink-0" />
                     <span className="truncate">{admin.email}</span>
                   </div>
                 </div>
 
-                {/* Center assignment */}
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${
-                  center
-                    ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                    : 'bg-muted text-muted-foreground border border-border'
-                }`}>
-                  <Building2 size={12} className="flex-shrink-0" />
-                  <span className="truncate">
-                    {center ? center.name : 'No center assigned'}
-                  </span>
-                </div>
+                {/* Center assignment — only show for admins */}
+                {!isSuperAdmin && (
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${
+                    center
+                      ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                      : 'bg-muted text-muted-foreground border border-border'
+                  }`}>
+                    <Building2 size={11} className="flex-shrink-0" />
+                    <span className="truncate">
+                      {center ? center.name : 'No center assigned'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Super admin note */}
+                {isSuperAdmin && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
+                    <Shield size={11} className="flex-shrink-0" />
+                    <span>Full system access — all centers</span>
+                  </div>
+                )}
 
                 {/* Footer */}
                 <div className="flex items-center justify-between pt-1 border-t">
                   <span className="text-xs text-muted-foreground">
-                    Joined {new Date(admin.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    Joined {new Date(admin.created_at).toLocaleDateString('en-GB', {
+                      day: 'numeric', month: 'short', year: 'numeric'
+                    })}
                   </span>
                   {admin.is_active
-                    ? <ShieldCheck size={14} className="text-green-600" />
+                    ? <ShieldCheck size={14} className={isSuperAdmin ? 'text-purple-600' : 'text-green-600'} />
                     : <ShieldOff size={14} className="text-muted-foreground" />
                   }
                 </div>
@@ -343,13 +384,13 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
         </div>
       )}
 
-      {/* ── CREATE ADMIN DIALOG ── */}
+      {/* ── CREATE DIALOG ── */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Create Admin Account</DialogTitle>
+            <DialogTitle>Create Account</DialogTitle>
             <DialogDescription>
-              The admin will be able to log in immediately with these credentials.
+              The account will be active immediately with these credentials.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -402,44 +443,105 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
                 />
               </div>
             </div>
+
+            {/* Role selector */}
             <div className="space-y-2">
-              <Label>Assign to Blood Center</Label>
-              <Select onValueChange={(v) => updateForm('center_id', v)}>
+              <Label>Account Role <span className="text-destructive">*</span></Label>
+              <Select
+                value={form.role}
+                onValueChange={(v) => updateForm('role', v)}
+              >
                 <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Select a center (optional)" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {centers.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name} — {c.city}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="admin">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0" />
+                      Admin — manages one blood center
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="super_admin">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0" />
+                      Super Admin — full system access
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Center assignment — only for admin role */}
+            {form.role === 'admin' && (
+              <div className="space-y-2">
+                <Label>Assign to Blood Center</Label>
+                <Select
+                  value={form.center_id}
+                  onValueChange={(v) => updateForm('center_id', v)}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select a center (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {centers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} — {c.city}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Super admin info note */}
+            {form.role === 'super_admin' && (
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-purple-50 border border-purple-100">
+                <Shield size={14} className="text-purple-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-purple-700">
+                  Super Admins have full access to all centers, all data, and all system settings. Only grant this role to trusted personnel.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)} disabled={isPending}>
+            <Button
+              variant="outline"
+              onClick={() => setShowCreate(false)}
+              disabled={isPending}
+            >
               Cancel
             </Button>
             <Button onClick={handleCreate} disabled={isPending} className="gap-2">
               {isPending && <Loader2 size={14} className="animate-spin" />}
-              Create Admin
+              Create Account
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ── EDIT ADMIN DIALOG ── */}
+      {/* ── EDIT DIALOG ── */}
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Admin</DialogTitle>
+            <DialogTitle>Edit Account</DialogTitle>
             <DialogDescription>
               Update details for {selectedAdmin?.full_name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {/* Role badge info */}
+            <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium ${
+              selectedAdmin?.role === 'super_admin'
+                ? 'bg-purple-50 text-purple-700 border border-purple-100'
+                : 'bg-orange-50 text-orange-700 border border-orange-100'
+            }`}>
+              <Shield size={12} className="flex-shrink-0" />
+              {selectedAdmin?.role === 'super_admin'
+                ? 'Super Admin — role cannot be changed here'
+                : 'Admin — manages assigned center'
+              }
+            </div>
+
             <div className="space-y-2">
               <Label>Full name</Label>
               <Input
@@ -468,28 +570,36 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Blood Center Assignment</Label>
-              <Select
-                value={form.center_id}
-                onValueChange={(v) => updateForm('center_id', v)}
-              >
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Select a center (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No center</SelectItem>
-                  {centers.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name} — {c.city}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+
+            {/* Center assignment — only for admins */}
+            {selectedAdmin?.role === 'admin' && (
+              <div className="space-y-2">
+                <Label>Blood Center Assignment</Label>
+                <Select
+                  value={form.center_id}
+                  onValueChange={(v) => updateForm('center_id', v)}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select a center (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No center</SelectItem>
+                    {centers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} — {c.city}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEdit(false)} disabled={isPending}>
+            <Button
+              variant="outline"
+              onClick={() => setShowEdit(false)}
+              disabled={isPending}
+            >
               Cancel
             </Button>
             <Button onClick={handleEdit} disabled={isPending} className="gap-2">
@@ -504,10 +614,11 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
       <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Admin Account</AlertDialogTitle>
+            <AlertDialogTitle>Delete Account</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <strong>{selectedAdmin?.full_name}</strong>'s account
-              and remove all their access. This action cannot be undone.
+              This will permanently delete{' '}
+              <strong>{selectedAdmin?.full_name}</strong>'s account and remove
+              all their access. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

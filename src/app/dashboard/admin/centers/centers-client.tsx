@@ -56,7 +56,28 @@ import { BloodTypeBadge } from '@/components/ui/blood-type-badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']
-const KENYAN_CITIES = ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika', 'Malindi', 'Kitale', 'Garissa', 'Kakamega']
+const KENYAN_CITIES = [
+  'Athi River', 'Awendo', 'Bamburi', 'Baringo', 'Bomet', 'Bondo',
+  'Bungoma', 'Busia', 'Butali', 'Butere', 'Burnt Forest', 'Changamwe',
+  'Diani', 'Eldama Ravine', 'Eldoret', 'Elgeyo Marakwet', 'Embu',
+  'Funyula', 'Garissa', 'Gede', 'Githunguri', 'Hola', 'Homa Bay',
+  'Isiolo', 'Iten', 'Juja', 'Kabarnet', 'Kajiado', 'Kakamega',
+  'Kaloleni', 'Kapsabet', 'Karuri', 'Kerugoya', 'Kericho', 'Kiambu',
+  'Kibera', 'Kilifi', 'Kiserian', 'Kisii', 'Kisumu', 'Kitale',
+  'Kitengela', 'Kitui', 'Kwale', 'Lamu', 'Laikipia', 'Limuru',
+  'Lodwar', 'Machakos', 'Malindi', 'Mandera', 'Maralal', 'Mariakani',
+  'Marsabit', 'Maseno', 'Matigari', 'Mazeras', 'Mbita', 'Meru',
+  'Migori', 'Miwani', 'Mlolongo', 'Moi\'s Bridge', 'Mombasa',
+  'Moyale', 'Mtito Andei', 'Mtwapa', 'Mumias', 'Murang\'a',
+  'Muranga', 'Mwingi', 'Nairobi', 'Naivasha', 'Nakuru', 'Nambale',
+  'Nandi', 'Nanyuki', 'Narok', 'Ngong', 'Nyahururu', 'Nyali',
+  'Nyamira', 'Nyeri', 'Ol Kalou', 'Ongata Rongai', 'Oyugis',
+  'Port Victoria', 'Rongo', 'Ruiru', 'Rumuruti', 'Samburu',
+  'Shanzu', 'Siaya', 'Sigacho', 'Taita Taveta', 'Tana River',
+  'Taveta', 'Thika', 'Tharaka Nithi', 'Trans Nzoia', 'Turkana',
+  'Uasin Gishu', 'Ukunda', 'Uriri', 'Vihiga', 'Voi', 'Wajir',
+  'Watamu', 'Webuye', 'West Pokot', 'Wundanyi',
+].sort()
 
 interface Center {
   id: string

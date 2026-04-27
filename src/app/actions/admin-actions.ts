@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
-// Create a new admin account
 export async function createAdmin(formData: {
   full_name: string
   email: string
@@ -12,6 +11,7 @@ export async function createAdmin(formData: {
   phone?: string
   location?: string
   center_id?: string
+  role?: 'admin' | 'super_admin'
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -26,25 +26,24 @@ export async function createAdmin(formData: {
   if (actor?.role !== 'super_admin') return { error: 'Unauthorized' }
 
   const adminClient = createAdminClient()
+  const assignedRole = formData.role ?? 'admin'
 
-  // Create auth user
   const { data: newUser, error: authError } = await adminClient.auth.admin.createUser({
     email: formData.email,
     password: formData.password,
     email_confirm: true,
     user_metadata: {
       full_name: formData.full_name,
-      role: 'admin',
+      role: assignedRole,
     },
   })
 
   if (authError) return { error: authError.message }
 
-  // Update profile with admin role and details
   const { error: profileError } = await adminClient
     .from('profiles')
     .update({
-      role: 'admin',
+      role: assignedRole,
       full_name: formData.full_name,
       phone: formData.phone || null,
       location: formData.location || null,
@@ -53,28 +52,30 @@ export async function createAdmin(formData: {
 
   if (profileError) return { error: profileError.message }
 
-  // Assign to center if provided
-  if (formData.center_id) {
+  // Only assign center for regular admins, not super admins
+  if (formData.center_id && assignedRole === 'admin') {
     await adminClient
       .from('blood_centers')
       .update({ admin_id: newUser.user.id })
       .eq('id', formData.center_id)
   }
 
-  // Log action
   await adminClient.from('audit_logs').insert({
     actor_id: user.id,
-    action: 'CREATE_ADMIN',
+    action: assignedRole === 'super_admin' ? 'CREATE_SUPER_ADMIN' : 'CREATE_ADMIN',
     table_name: 'profiles',
     record_id: newUser.user.id,
-    new_data: { email: formData.email, full_name: formData.full_name },
+    new_data: {
+      email: formData.email,
+      full_name: formData.full_name,
+      role: assignedRole,
+    },
   })
 
   revalidatePath('/dashboard/super-admin/admins')
   return { success: true }
 }
 
-// Toggle admin active status
 export async function toggleAdminStatus(adminId: string, isActive: boolean) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -100,7 +101,6 @@ export async function toggleAdminStatus(adminId: string, isActive: boolean) {
   return { success: true }
 }
 
-// Delete admin account
 export async function deleteAdmin(adminId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -114,7 +114,16 @@ export async function deleteAdmin(adminId: string) {
 
   if (actor?.role !== 'super_admin') return { error: 'Unauthorized' }
 
+  // Prevent deleting yourself
+  if (adminId === user.id) return { error: 'You cannot delete your own account' }
+
   const adminClient = createAdminClient()
+
+  // Unassign from any center first
+  await adminClient
+    .from('blood_centers')
+    .update({ admin_id: null })
+    .eq('admin_id', adminId)
 
   await adminClient.from('audit_logs').insert({
     actor_id: user.id,
@@ -130,7 +139,6 @@ export async function deleteAdmin(adminId: string) {
   return { success: true }
 }
 
-// Update admin details
 export async function updateAdmin(adminId: string, formData: {
   full_name: string
   phone?: string
@@ -154,15 +162,14 @@ export async function updateAdmin(adminId: string, formData: {
 
   if (error) return { error: error.message }
 
-  // Update center assignment
-  // First unassign from any current center
+  // Unassign from previous center
   await adminClient
     .from('blood_centers')
     .update({ admin_id: null })
     .eq('admin_id', adminId)
 
-  // Then assign to new center if provided
-  if (formData.center_id) {
+  // Assign to new center if provided
+  if (formData.center_id && formData.center_id !== 'none') {
     await adminClient
       .from('blood_centers')
       .update({ admin_id: adminId })
