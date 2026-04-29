@@ -20,59 +20,46 @@ export default async function SuperAdminRequestsPage() {
 
   const adminClient = createAdminClient()
 
-  const [
-    { data: baseRequests, error: requestsError },
-    { data: centers },
-  ] = await Promise.all([
-    adminClient
-      .from('blood_requests')
-      .select('*')
-      .order('created_at', { ascending: false }),
-    adminClient
-      .from('blood_centers')
-      .select('id, name, city')
-      .eq('is_active', true),
-  ])
+  // Get all requests for super admin: pending unassigned, pending assigned, and all approved/rejected/fulfilled
+  const { data: requests, error: requestsError } = await adminClient
+    .from('blood_requests')
+    .select('*')
+    .order('created_at', { ascending: false })
 
   if (requestsError) {
     console.error('Failed to fetch blood requests:', requestsError.message)
   }
 
+  // Get unique requester and center IDs
   const requesterIds = Array.from(
-    new Set((baseRequests ?? []).map(r => r.requester_id).filter(Boolean))
+    new Set((requests ?? []).map(r => r.requester_id).filter(Boolean))
   )
   const centerIds = Array.from(
-    new Set((baseRequests ?? []).map(r => r.center_id).filter(Boolean))
+    new Set((requests ?? []).map(r => r.center_id).filter(Boolean))
   )
 
-  const [{ data: requesters }, { data: requestCenters }] = await Promise.all([
+  // Fetch profiles and centers separately to avoid relationship conflicts
+  const [requestersData, centersData] = await Promise.all([
     requesterIds.length > 0
       ? adminClient
           .from('profiles')
           .select('id, full_name, email, phone, blood_type')
           .in('id', requesterIds)
-      : Promise.resolve({ data: [] as {
-          id: string
-          full_name: string
-          email: string
-          phone: string | null
-          blood_type: string | null
-        }[] }),
+      : Promise.resolve({ data: [] }),
     centerIds.length > 0
       ? adminClient
           .from('blood_centers')
           .select('id, name, city')
           .in('id', centerIds)
-      : Promise.resolve({ data: [] as {
-          id: string
-          name: string
-          city: string
-        }[] }),
+      : Promise.resolve({ data: [] })
   ])
 
-  const requesterMap = new Map((requesters ?? []).map(r => [r.id, r]))
-  const centerMap = new Map((requestCenters ?? []).map(c => [c.id, c]))
-  const requests = (baseRequests ?? []).map(r => ({
+  // Create maps for lookup
+  const requesterMap = new Map((requestersData.data ?? []).map(r => [r.id, r]))
+  const centerMap = new Map((centersData.data ?? []).map(c => [c.id, c]))
+  
+  // Combine data
+  const requestsWithDetails = (requests ?? []).map(r => ({
     ...r,
     requester: r.requester_id ? requesterMap.get(r.requester_id) ?? null : null,
     center: r.center_id ? centerMap.get(r.center_id) ?? null : null,
@@ -80,8 +67,8 @@ export default async function SuperAdminRequestsPage() {
 
   return (
     <RequestsClient
-      requests={requests ?? []}
-      centers={centers ?? []}
+      requests={requestsWithDetails ?? []}
+      centers={centersData.data ?? []}
       isSuperAdmin={true}
     />
   )

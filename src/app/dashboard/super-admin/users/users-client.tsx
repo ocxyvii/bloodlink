@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import {
   Users, Search, RefreshCw, Eye,
   Power, PowerOff, Loader2,
-  Heart, ClipboardList, MapPin, Phone
+  Heart, ClipboardList, MapPin, Phone, XCircle
 } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select'
 import {
   Dialog, DialogContent, DialogHeader,
-  DialogTitle, DialogDescription,
+  DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
 import {
   Table, TableBody, TableCell,
@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/table'
 import { BloodTypeBadge } from '@/components/ui/blood-type-badge'
 import { toggleAdminStatus } from '@/app/actions/admin-actions'
+import { deleteUser } from '@/app/actions/user-actions'
 import { format, formatDistanceToNow } from 'date-fns'
 import { Profile } from '@/types'
 
@@ -42,6 +43,7 @@ export function UsersClient({ users, requestCounts, donationCounts }: UsersClien
   const [filterDonor, setFilterDonor]   = useState('all')
   const [filterBlood, setFilterBlood]   = useState('all')
   const [selected, setSelected]         = useState<Profile | null>(null)
+  const [showDelete, setShowDelete]       = useState(false)
 
   const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']
 
@@ -63,7 +65,26 @@ export function UsersClient({ users, requestCounts, donationCounts }: UsersClien
     startTransition(async () => {
       const result = await toggleAdminStatus(user.id, !user.is_active)
       if (result.error) toast.error(result.error)
-      else toast.success(`User ${user.is_active ? 'deactivated' : 'activated'}`)
+      else toast.success(`User ${user.is_active ? 'deactivated' : 'activated'} successfully`)
+    })
+  }
+
+  const handleDelete = (user: Profile) => {
+    setSelected(user)
+    setShowDelete(true)
+  }
+
+  const confirmDelete = () => {
+    if (!selected) return
+    startTransition(async () => {
+      const result = await deleteUser(selected.id)
+      if (result.error) {
+        toast.error(result.error)
+      } else {
+        toast.success('User deleted permanently')
+        setShowDelete(false)
+        setSelected(null)
+      }
     })
   }
 
@@ -241,6 +262,13 @@ export function UsersClient({ users, requestCounts, donationCounts }: UsersClien
                           : <Power size={13} className="text-green-600" />
                         }
                       </Button>
+                      <Button
+                        variant="ghost" size="icon" className="h-8 w-8"
+                        onClick={() => handleDelete(user)}
+                        disabled={isPending}
+                      >
+                        <XCircle size={13} className="text-red-600" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -295,6 +323,46 @@ export function UsersClient({ users, requestCounts, donationCounts }: UsersClien
               ))}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Dialog */}
+      <Dialog open={showDelete} onOpenChange={setShowDelete}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <XCircle size={18} /> Delete User
+            </DialogTitle>
+            <DialogDescription>
+              This will permanently delete the user account and all associated data.
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
+              <strong>Warning:</strong> This will permanently remove the user, their requests, donations, and all associated data.
+            </div>
+            {selected && (
+              <div className="space-y-2 text-sm">
+                <div><strong>Name:</strong> {selected.full_name}</div>
+                <div><strong>Email:</strong> {selected.email}</div>
+                <div><strong>Role:</strong> {selected.role}</div>
+                <div><strong>Donor:</strong> {selected.is_donor ? 'Yes' : 'No'}</div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDelete(false)} disabled={isPending}>Cancel</Button>
+            <Button
+              onClick={confirmDelete}
+              disabled={isPending}
+              variant="destructive"
+              className="gap-2"
+            >
+              {isPending && <Loader2 size={14} className="animate-spin" />}
+              Delete Permanently
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

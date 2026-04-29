@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'BloodLink — Blood Booking System',
-  description: 'Connecting donors and recipients to save lives across Kenya',
+  description: 'Connecting donors and recipients to save lives across Somalia',
 }
 
 export default function RootLayout({

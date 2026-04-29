@@ -82,7 +82,7 @@ export function FindCentersClient({
           Find Blood Centers
         </h1>
         <p className="text-muted-foreground mt-1">
-          {centers.length} active centers across Kenya
+          {centers.length} active centers across Somalia
         </p>
       </div>
 

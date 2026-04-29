@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 import {
   Bell, CheckCheck, Info,
   CheckCircle2, AlertTriangle, Zap, Loader2
@@ -33,7 +34,41 @@ const typeConfig = {
 
 export function NotificationsClient({ notifications }: { notifications: Notification[] }) {
   const [isPending, startTransition] = useTransition()
-  const unread = notifications.filter(n => !n.is_read).length
+  const [currentNotifications, setCurrentNotifications] = useState(notifications)
+  const unread = currentNotifications.filter(n => !n.is_read).length
+
+  // Real-time notification updates
+  useEffect(() => {
+    const supabase = createClient()
+    
+    // Listen for new notifications
+    const channel = supabase
+      .channel('notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications'
+        },
+        (payload) => {
+          const newNotification = payload.new as Notification
+          setCurrentNotifications(prev => [newNotification, ...prev])
+          
+          // Show toast for new notifications
+          const config = typeConfig[newNotification.type as keyof typeof typeConfig] ?? typeConfig.info
+          toast(newNotification.title, {
+            description: newNotification.message,
+            duration: 5000
+          })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
 
   const handleMarkRead = (id: string) => {
     startTransition(async () => {
@@ -57,7 +92,7 @@ export function NotificationsClient({ notifications }: { notifications: Notifica
             Notifications
           </h1>
           <p className="text-muted-foreground mt-1">
-            {notifications.length} total · {unread} unread
+            {currentNotifications.length} total · {unread} unread
           </p>
         </div>
         {unread > 0 && (
@@ -77,7 +112,7 @@ export function NotificationsClient({ notifications }: { notifications: Notifica
         )}
       </div>
 
-      {notifications.length === 0 ? (
+      {currentNotifications.length === 0 ? (
         <div className="text-center py-16 bg-card rounded-2xl border text-muted-foreground">
           <Bell size={40} className="mx-auto mb-3 opacity-20" />
           <p className="font-medium">No notifications yet</p>
@@ -85,7 +120,7 @@ export function NotificationsClient({ notifications }: { notifications: Notifica
         </div>
       ) : (
         <div className="space-y-2">
-          {notifications.map(n => {
+          {currentNotifications.map(n => {
             const config = typeConfig[n.type as keyof typeof typeConfig] ?? typeConfig.info
             return (
               <div

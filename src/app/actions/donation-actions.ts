@@ -15,7 +15,7 @@ export async function scheduleDonation(data: {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('blood_type, is_donor')
+    .select('full_name, blood_type, is_donor')
     .eq('id', user.id)
     .single()
 
@@ -45,6 +45,46 @@ export async function scheduleDonation(data: {
       .from('profiles')
       .update({ is_donor: true })
       .eq('id', user.id)
+  }
+
+  // Smart notification routing for donation scheduling
+  const notificationsToAdd: any[] = []
+  
+  // Notify the assigned admin for the center
+  const { data: centerAdmin } = await adminClient
+    .from('blood_centers')
+    .select('admin_id')
+    .eq('id', data.center_id)
+    .single()
+  
+  if (centerAdmin?.admin_id) {
+    notificationsToAdd.push({
+      user_id: centerAdmin.admin_id,
+      title:   'New Donation Scheduled',
+      message: `${profile.blood_type} blood donation scheduled for ${data.donation_date} - Donor: ${profile.full_name}`,
+      type:    'info',
+    })
+  } else {
+    // No admin assigned, notify super admins
+    const { data: superAdmins } = await adminClient
+      .from('profiles')
+      .select('id')
+      .eq('role', 'super_admin')
+      .eq('is_active', true)
+    
+    if (superAdmins) {
+      notificationsToAdd.push(...superAdmins.map(sa => ({
+        user_id: sa.id,
+        title:   'New Donation Scheduled (Unassigned Center)',
+        message: `${profile.blood_type} blood donation scheduled for ${data.donation_date} - Donor: ${profile.full_name} - No admin assigned to center`,
+        type:    'warning',
+      })))
+    }
+  }
+  
+  // Insert notifications
+  if (notificationsToAdd.length > 0) {
+    await adminClient.from('notifications').insert(notificationsToAdd)
   }
 
   revalidatePath('/dashboard/user/my-donations')
@@ -144,18 +184,41 @@ export async function updateProfile(data: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
+  // Validate phone if provided
+  if (data.phone && data.phone.trim() !== '') {
+    const { validateSomaliPhone } = await import('@/lib/phone')
+    const { valid, formatted, error } = validateSomaliPhone(data.phone)
+    if (!valid) return { error }
+
+    // Check uniqueness
+    const adminClient = createAdminClient()
+    const { data: existing } = await adminClient
+      .from('profiles')
+      .select('id')
+      .eq('phone', formatted!)
+      .neq('id', user.id)
+      .limit(1)
+
+    if (existing && existing.length > 0) {
+      return { error: 'This phone number is already registered to another account' }
+    }
+
+    // Use normalized format
+    data.phone = formatted!
+  }
+
   const adminClient = createAdminClient()
 
   const { error } = await adminClient
     .from('profiles')
     .update({
-      full_name: data.full_name,
-      phone: data.phone || null,
-      location: data.location || null,
+      full_name:     data.full_name,
+      phone:         data.phone ? data.phone : null,
+      location:      data.location || null,
       date_of_birth: data.date_of_birth || null,
-      blood_type: data.blood_type || null,
-      is_donor: data.is_donor ?? false,
-      updated_at: new Date().toISOString(),
+      blood_type:    data.blood_type || null,
+      is_donor:      data.is_donor ?? false,
+      updated_at:    new Date().toISOString(),
     })
     .eq('id', user.id)
 
@@ -260,4 +323,31 @@ export async function changePassword(currentPassword: string, newPassword: strin
   if (error) return { error: error.message }
 
   return { success: true }
+}
+export async function checkPhoneAvailable(phone: string, currentUserId?: string) {
+  const supabase = await createClient()
+
+  const { validateSomaliPhone } = await import('@/lib/phone')
+  const { valid, formatted, error } = validateSomaliPhone(phone)
+
+  if (!valid) return { available: false, error }
+  if (!formatted) return { available: true, error: null }
+
+  const query = supabase
+    .from('profiles')
+    .select('id')
+    .eq('phone', formatted)
+    .limit(1)
+
+  if (currentUserId) {
+    query.neq('id', currentUserId)
+  }
+
+  const { data } = await query
+
+  if (data && data.length > 0) {
+    return { available: false, error: 'This phone number is already registered to another account' }
+  }
+
+  return { available: true, formatted, error: null }
 }

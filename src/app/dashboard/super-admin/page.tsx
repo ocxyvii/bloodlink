@@ -24,10 +24,30 @@ export default async function SuperAdminOverview() {
     supabase.from('blood_centers').select('*', { count: 'exact', head: true }).eq('is_active', true),
     supabase.from('blood_inventory').select('blood_type, units_available').order('units_available'),
     supabase.from('blood_requests')
-      .select('*, requester:profiles(full_name, blood_type)')
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(5),
   ])
+
+  // Fetch requester information separately to avoid relationship conflicts
+  const requesterIds = Array.from(
+    new Set((recentRequests ?? []).map(r => r.requester_id).filter(Boolean))
+  )
+  
+  const { data: requesters } = requesterIds.length > 0
+    ? await supabase
+        .from('profiles')
+        .select('id, full_name, blood_type')
+        .in('id', requesterIds)
+    : { data: [] }
+  
+  const requesterMap = new Map((requesters ?? []).map(r => [r.id, r]))
+  
+  // Combine data
+  const recentRequestsWithDetails = (recentRequests ?? []).map(r => ({
+    ...r,
+    requester: r.requester_id ? requesterMap.get(r.requester_id) ?? null : null,
+  }))
 
   // Aggregate inventory by blood type
   const inventoryByType = (inventory ?? []).reduce((acc: Record<string, number>, item) => {
@@ -110,10 +130,10 @@ export default async function SuperAdminOverview() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {recentRequests?.length === 0 && (
+            {recentRequestsWithDetails?.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">No requests yet</p>
             )}
-            {recentRequests?.map((req) => (
+            {recentRequestsWithDetails?.map((req) => (
               <div key={req.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
                 <BloodTypeBadge type={req.blood_type} />
                 <div className="flex-1 min-w-0">

@@ -21,7 +21,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { BloodTypeBadge } from '@/components/ui/blood-type-badge'
-import { Badge } from '@/components/ui/badge'
 
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']
 
@@ -53,47 +52,59 @@ export function RequestBloodClient({
   const [isPending, startTransition] = useTransition()
   const [step, setStep] = useState(1)
   const [form, setForm] = useState({
-    blood_type: userBloodType ?? '',
-    units_needed: '1',
-    urgency: 'normal',
+    blood_type:    userBloodType ?? '',
+    units_needed:  '1',
+    urgency:       'normal',
     hospital_name: '',
-    patient_name: '',
-    reason: '',
-    center_id: '',
+    patient_name:  '',
+    reason:        '',
+    center_id:     '',
   })
 
   const updateForm = (field: string, value: string) =>
     setForm(prev => ({ ...prev, [field]: value }))
 
-  const getAvailableUnits = (bloodType: string, centerId?: string) => {
+  const getAvailableUnits = (bloodType: string) => {
     if (!bloodType) return 0
     return inventory
-      .filter(i =>
-        i.blood_type === bloodType &&
-        (centerId ? i.center_id === centerId : true)
-      )
+      .filter(i => i.blood_type === bloodType)
       .reduce((s, i) => s + i.units_available, 0)
   }
 
   const getCenterStock = (centerId: string, bloodType: string) =>
-    inventory.find(i => i.center_id === centerId && i.blood_type === bloodType)?.units_available ?? 0
+    inventory.find(
+      i => i.center_id === centerId && i.blood_type === bloodType
+    )?.units_available ?? 0
 
   const availableUnits = getAvailableUnits(form.blood_type)
+
+  const getSanitizedCenterId = (): string | undefined => {
+    if (
+      !form.center_id ||
+      form.center_id === 'any' ||
+      form.center_id === 'none' ||
+      form.center_id.trim() === ''
+    ) {
+      return undefined
+    }
+    return form.center_id
+  }
 
   const handleSubmit = () => {
     if (!form.blood_type || !form.hospital_name || !form.patient_name) {
       toast.error('Please fill in all required fields')
       return
     }
+
     startTransition(async () => {
       const result = await createBloodRequest({
-        blood_type: form.blood_type,
-        units_needed: parseInt(form.units_needed),
-        urgency: form.urgency,
+        blood_type:    form.blood_type,
+        units_needed:  parseInt(form.units_needed),
+        urgency:       form.urgency,
         hospital_name: form.hospital_name,
-        patient_name: form.patient_name,
-        reason: form.reason || undefined,
-        center_id: form.center_id || undefined,
+        patient_name:  form.patient_name,
+        reason:        form.reason || undefined,
+        center_id:     getSanitizedCenterId(),
       })
       if (result.error) {
         toast.error(result.error)
@@ -106,30 +117,36 @@ export function RequestBloodClient({
 
   const urgencyOptions = [
     {
-      value: 'normal',
-      label: 'Normal',
-      desc: 'Within 24–48 hours',
-      icon: <Clock size={16} />,
-      color: 'border-blue-200 bg-blue-50 text-blue-700',
+      value:  'normal',
+      label:  'Normal',
+      desc:   'Within 24–48 hours',
+      icon:   <Clock size={16} />,
+      color:  'border-blue-200 bg-blue-50 text-blue-700',
       active: 'border-blue-500 bg-blue-100',
     },
     {
-      value: 'urgent',
-      label: 'Urgent',
-      desc: 'Within a few hours',
-      icon: <AlertTriangle size={16} />,
-      color: 'border-orange-200 bg-orange-50 text-orange-700',
+      value:  'urgent',
+      label:  'Urgent',
+      desc:   'Within a few hours',
+      icon:   <AlertTriangle size={16} />,
+      color:  'border-orange-200 bg-orange-50 text-orange-700',
       active: 'border-orange-500 bg-orange-100',
     },
     {
-      value: 'emergency',
-      label: 'Emergency',
-      desc: 'Immediate — life-threatening',
-      icon: <Zap size={16} />,
-      color: 'border-red-200 bg-red-50 text-red-700',
+      value:  'emergency',
+      label:  'Emergency',
+      desc:   'Immediate — life-threatening',
+      icon:   <Zap size={16} />,
+      color:  'border-red-200 bg-red-50 text-red-700',
       active: 'border-red-500 bg-red-100',
     },
   ]
+
+  const selectedCenterName = (() => {
+    const id = getSanitizedCenterId()
+    if (!id) return 'Any available center'
+    return centers.find(c => c.id === id)?.name ?? 'Any available center'
+  })()
 
   return (
     <div className="p-6 lg:p-8 max-w-2xl mx-auto space-y-8">
@@ -162,7 +179,9 @@ export function RequestBloodClient({
             }`}>
               {step > s.n ? <CheckCircle2 size={14} /> : s.n}
             </div>
-            <span className={`text-sm hidden sm:block ${step >= s.n ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+            <span className={`text-sm hidden sm:block ${
+              step >= s.n ? 'text-foreground font-medium' : 'text-muted-foreground'
+            }`}>
               {s.label}
             </span>
             {i < 2 && <ChevronRight size={14} className="text-muted-foreground mx-1" />}
@@ -175,12 +194,15 @@ export function RequestBloodClient({
         {/* ── STEP 1: Blood Info ── */}
         {step === 1 && (
           <div className="space-y-6">
+
+            {/* Blood Type */}
             <div className="space-y-3">
-              <Label className="text-sm font-semibold">Blood Type Required <span className="text-destructive">*</span></Label>
+              <Label className="text-sm font-semibold">
+                Blood Type Required <span className="text-destructive">*</span>
+              </Label>
               <div className="grid grid-cols-4 gap-2">
                 {BLOOD_TYPES.map(bt => {
                   const total = getAvailableUnits(bt)
-                  const available = total > 0
                   return (
                     <button
                       key={bt}
@@ -189,14 +211,18 @@ export function RequestBloodClient({
                       className={`flex flex-col items-center p-3 rounded-xl border-2 transition-all ${
                         form.blood_type === bt
                           ? 'border-primary bg-primary/10'
-                          : available
+                          : total > 0
                           ? 'border-border hover:border-primary/50 bg-background'
                           : 'border-border bg-muted/50 opacity-60'
                       }`}
                     >
                       <BloodTypeBadge type={bt} />
                       <span className={`text-xs mt-1 font-medium ${
-                        total === 0 ? 'text-red-500' : total < 10 ? 'text-yellow-600' : 'text-green-600'
+                        total === 0
+                          ? 'text-red-500'
+                          : total < 10
+                          ? 'text-yellow-600'
+                          : 'text-green-600'
                       }`}>
                         {total > 0 ? `${total}u` : 'None'}
                       </span>
@@ -204,48 +230,79 @@ export function RequestBloodClient({
                   )
                 })}
               </div>
+
               {form.blood_type && availableUnits === 0 && (
                 <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200">
                   <AlertTriangle size={15} className="text-red-600 mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-red-600">
-                    <strong>{form.blood_type}</strong> is currently out of stock across all centers.
-                    Your request will still be submitted and processed as soon as stock is available.
+                    <strong>{form.blood_type}</strong> is currently out of stock.
+                    Your request will still be submitted and fulfilled when stock is available.
                   </p>
                 </div>
               )}
+
               {form.blood_type && availableUnits > 0 && (
                 <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 border border-green-200">
                   <CheckCircle2 size={14} className="text-green-600" />
                   <p className="text-xs text-green-600">
-                    <strong>{availableUnits} units</strong> of <strong>{form.blood_type}</strong> available across all centers
+                    <strong>{availableUnits} units</strong> of{' '}
+                    <strong>{form.blood_type}</strong> available across all centers
                   </p>
                 </div>
               )}
             </div>
 
+            {/* Units */}
             <div className="space-y-2">
-              <Label className="text-sm font-semibold">Units Needed <span className="text-destructive">*</span></Label>
+              <Label className="text-sm font-semibold">
+                Units Needed <span className="text-destructive">*</span>
+              </Label>
               <div className="flex items-center gap-3">
                 <Button
-                  type="button" variant="outline" size="icon" className="h-10 w-10 rounded-xl flex-shrink-0"
-                  onClick={() => updateForm('units_needed', String(Math.max(1, parseInt(form.units_needed) - 1)))}
-                >−</Button>
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 rounded-xl flex-shrink-0"
+                  onClick={() =>
+                    updateForm('units_needed',
+                      String(Math.max(1, parseInt(form.units_needed) - 1))
+                    )
+                  }
+                >
+                  −
+                </Button>
                 <Input
-                  type="number" min="1" max="20"
+                  type="number"
+                  min="1"
+                  max="20"
                   value={form.units_needed}
                   onChange={e => updateForm('units_needed', e.target.value)}
                   className="h-10 text-center text-lg font-bold w-20 flex-shrink-0"
                 />
                 <Button
-                  type="button" variant="outline" size="icon" className="h-10 w-10 rounded-xl flex-shrink-0"
-                  onClick={() => updateForm('units_needed', String(Math.min(20, parseInt(form.units_needed) + 1)))}
-                >+</Button>
-                <span className="text-sm text-muted-foreground">units (1 unit ≈ 450ml)</span>
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 rounded-xl flex-shrink-0"
+                  onClick={() =>
+                    updateForm('units_needed',
+                      String(Math.min(20, parseInt(form.units_needed) + 1))
+                    )
+                  }
+                >
+                  +
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  units (1 unit ≈ 450ml)
+                </span>
               </div>
             </div>
 
+            {/* Urgency */}
             <div className="space-y-3">
-              <Label className="text-sm font-semibold">Urgency Level <span className="text-destructive">*</span></Label>
+              <Label className="text-sm font-semibold">
+                Urgency Level <span className="text-destructive">*</span>
+              </Label>
               <div className="space-y-2">
                 {urgencyOptions.map(opt => (
                   <button
@@ -253,11 +310,15 @@ export function RequestBloodClient({
                     type="button"
                     onClick={() => updateForm('urgency', opt.value)}
                     className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
-                      form.urgency === opt.value ? opt.active : 'border-border hover:border-border/80 bg-background'
+                      form.urgency === opt.value
+                        ? opt.active
+                        : 'border-border hover:border-border/80 bg-background'
                     }`}
                   >
                     <span className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      form.urgency === opt.value ? opt.color : 'bg-muted text-muted-foreground'
+                      form.urgency === opt.value
+                        ? opt.color
+                        : 'bg-muted text-muted-foreground'
                     }`}>
                       {opt.icon}
                     </span>
@@ -266,7 +327,9 @@ export function RequestBloodClient({
                       <p className="text-xs text-muted-foreground">{opt.desc}</p>
                     </div>
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                      form.urgency === opt.value ? 'border-primary bg-primary' : 'border-muted-foreground'
+                      form.urgency === opt.value
+                        ? 'border-primary bg-primary'
+                        : 'border-muted-foreground'
                     }`}>
                       {form.urgency === opt.value && (
                         <div className="w-2 h-2 rounded-full bg-white" />
@@ -280,7 +343,10 @@ export function RequestBloodClient({
             <Button
               className="w-full h-11"
               onClick={() => {
-                if (!form.blood_type) { toast.error('Please select a blood type'); return }
+                if (!form.blood_type) {
+                  toast.error('Please select a blood type')
+                  return
+                }
                 setStep(2)
               }}
             >
@@ -292,8 +358,11 @@ export function RequestBloodClient({
         {/* ── STEP 2: Patient Info ── */}
         {step === 2 && (
           <div className="space-y-5">
+
             <div className="space-y-2">
-              <Label>Patient Name <span className="text-destructive">*</span></Label>
+              <Label>
+                Patient Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 placeholder="Full name of the patient"
                 value={form.patient_name}
@@ -301,38 +370,49 @@ export function RequestBloodClient({
                 className="h-11"
               />
             </div>
+
             <div className="space-y-2">
-              <Label>Hospital / Facility Name <span className="text-destructive">*</span></Label>
+              <Label>
+                Hospital / Facility Name <span className="text-destructive">*</span>
+              </Label>
               <Input
-                placeholder="e.g. Kenyatta National Hospital"
+                placeholder="e.g. Galkacyo General Hospital"
                 value={form.hospital_name}
                 onChange={e => updateForm('hospital_name', e.target.value)}
                 className="h-11"
               />
             </div>
+
             <div className="space-y-2">
               <Label>Preferred Blood Center (optional)</Label>
               <Select
-                value={form.center_id}
-                onValueChange={v => updateForm('center_id', v)}
+                value={form.center_id || 'any'}
+                onValueChange={v => updateForm('center_id', v === 'any' ? '' : v)}
               >
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="Select nearest center" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="any">Any available center</SelectItem>
+                  <SelectItem value="any">
+                    <div className="flex items-center gap-2">
+                      <Building2 size={14} className="text-muted-foreground" />
+                      <span>Any available center</span>
+                    </div>
+                  </SelectItem>
                   {centers.map(c => {
-                    const stock = form.blood_type ? getCenterStock(c.id, form.blood_type) : 0
+                    const stock = form.blood_type
+                      ? getCenterStock(c.id, form.blood_type)
+                      : 0
                     return (
                       <SelectItem key={c.id} value={c.id}>
                         <div className="flex items-center gap-2">
                           <span>{c.name} — {c.city}</span>
                           {form.blood_type && (
-                            <Badge variant="outline" className={`text-xs ml-1 ${
-                              stock === 0 ? 'text-red-600 border-red-200' : 'text-green-600 border-green-200'
+                            <span className={`text-xs font-semibold ${
+                              stock === 0 ? 'text-red-500' : 'text-green-600'
                             }`}>
-                              {stock}u
-                            </Badge>
+                              ({stock} units)
+                            </span>
                           )}
                         </div>
                       </SelectItem>
@@ -341,6 +421,7 @@ export function RequestBloodClient({
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-2">
               <Label>Reason / Medical Condition (optional)</Label>
               <Textarea
@@ -351,8 +432,13 @@ export function RequestBloodClient({
                 className="resize-none"
               />
             </div>
+
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1 h-11" onClick={() => setStep(1)}>
+              <Button
+                variant="outline"
+                className="flex-1 h-11"
+                onClick={() => setStep(1)}
+              >
                 Back
               </Button>
               <Button
@@ -374,7 +460,9 @@ export function RequestBloodClient({
         {/* ── STEP 3: Review & Submit ── */}
         {step === 3 && (
           <div className="space-y-5">
-            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Review your request</p>
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Review your request
+            </p>
 
             {form.urgency === 'emergency' && (
               <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border-2 border-red-200">
@@ -390,15 +478,39 @@ export function RequestBloodClient({
 
             <div className="space-y-2">
               {[
-                { label: 'Blood Type',  value: <BloodTypeBadge type={form.blood_type} /> },
-                { label: 'Units',       value: `${form.units_needed} unit${parseInt(form.units_needed) > 1 ? 's' : ''}` },
-                { label: 'Urgency',     value: form.urgency.charAt(0).toUpperCase() + form.urgency.slice(1) },
-                { label: 'Patient',     value: form.patient_name },
-                { label: 'Hospital',    value: form.hospital_name },
-                { label: 'Center',      value: centers.find(c => c.id === form.center_id)?.name ?? 'Any available' },
-                { label: 'Reason',      value: form.reason || '—' },
+                {
+                  label: 'Blood Type',
+                  value: <BloodTypeBadge type={form.blood_type} />,
+                },
+                {
+                  label: 'Units',
+                  value: `${form.units_needed} unit${parseInt(form.units_needed) > 1 ? 's' : ''}`,
+                },
+                {
+                  label: 'Urgency',
+                  value: form.urgency.charAt(0).toUpperCase() + form.urgency.slice(1),
+                },
+                {
+                  label: 'Patient',
+                  value: form.patient_name,
+                },
+                {
+                  label: 'Hospital',
+                  value: form.hospital_name,
+                },
+                {
+                  label: 'Center',
+                  value: selectedCenterName,
+                },
+                {
+                  label: 'Reason',
+                  value: form.reason || '—',
+                },
               ].map(item => (
-                <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-muted/40">
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between p-3 rounded-xl bg-muted/40"
+                >
                   <span className="text-sm text-muted-foreground">{item.label}</span>
                   <span className="text-sm font-medium">{item.value}</span>
                 </div>
@@ -409,12 +521,17 @@ export function RequestBloodClient({
               <Info size={14} className="text-blue-600 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-blue-600">
                 After submission, an admin will review and approve your request.
-                You'll receive a notification when it's processed.
+                You will receive a notification when it is processed.
               </p>
             </div>
 
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1 h-11" onClick={() => setStep(2)} disabled={isPending}>
+              <Button
+                variant="outline"
+                className="flex-1 h-11"
+                onClick={() => setStep(2)}
+                disabled={isPending}
+              >
                 Back
               </Button>
               <Button

@@ -122,7 +122,7 @@ export function SettingsClient({ profile, stats }: SettingsClientProps) {
             <div className="space-y-2">
               <Label>Phone</Label>
               <Input
-                placeholder="+254 700 000 000"
+                placeholder="+252 60 000 0000"
                 value={form.phone}
                 onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
                 className="h-10"
@@ -131,7 +131,7 @@ export function SettingsClient({ profile, stats }: SettingsClientProps) {
             <div className="space-y-2 md:col-span-2">
               <Label>Location</Label>
               <Input
-                placeholder="Nairobi, Kenya"
+                placeholder="Galkacyo, Somalia"
                 value={form.location}
                 onChange={e => setForm(p => ({ ...p, location: e.target.value }))}
                 className="h-10"
@@ -160,7 +160,7 @@ export function SettingsClient({ profile, stats }: SettingsClientProps) {
             { label: 'Framework',    value: 'Next.js 16 + Supabase' },
             { label: 'Database',     value: 'PostgreSQL (Supabase)' },
             { label: 'Auth',         value: 'Supabase Auth with RLS' },
-            { label: 'Deployed',     value: 'Kenya 🇰🇪' },
+            { label: 'Deployed',     value: 'Somalia ��' },
           ].map(item => (
             <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-muted/40">
               <span className="text-sm text-muted-foreground">{item.label}</span>

@@ -56,27 +56,24 @@ import { BloodTypeBadge } from '@/components/ui/blood-type-badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']
-const KENYAN_CITIES = [
-  'Athi River', 'Awendo', 'Bamburi', 'Baringo', 'Bomet', 'Bondo',
-  'Bungoma', 'Busia', 'Butali', 'Butere', 'Burnt Forest', 'Changamwe',
-  'Diani', 'Eldama Ravine', 'Eldoret', 'Elgeyo Marakwet', 'Embu',
-  'Funyula', 'Garissa', 'Gede', 'Githunguri', 'Hola', 'Homa Bay',
-  'Isiolo', 'Iten', 'Juja', 'Kabarnet', 'Kajiado', 'Kakamega',
-  'Kaloleni', 'Kapsabet', 'Karuri', 'Kerugoya', 'Kericho', 'Kiambu',
-  'Kibera', 'Kilifi', 'Kiserian', 'Kisii', 'Kisumu', 'Kitale',
-  'Kitengela', 'Kitui', 'Kwale', 'Lamu', 'Laikipia', 'Limuru',
-  'Lodwar', 'Machakos', 'Malindi', 'Mandera', 'Maralal', 'Mariakani',
-  'Marsabit', 'Maseno', 'Matigari', 'Mazeras', 'Mbita', 'Meru',
-  'Migori', 'Miwani', 'Mlolongo', 'Moi\'s Bridge', 'Mombasa',
-  'Moyale', 'Mtito Andei', 'Mtwapa', 'Mumias', 'Murang\'a',
-  'Muranga', 'Mwingi', 'Nairobi', 'Naivasha', 'Nakuru', 'Nambale',
-  'Nandi', 'Nanyuki', 'Narok', 'Ngong', 'Nyahururu', 'Nyali',
-  'Nyamira', 'Nyeri', 'Ol Kalou', 'Ongata Rongai', 'Oyugis',
-  'Port Victoria', 'Rongo', 'Ruiru', 'Rumuruti', 'Samburu',
-  'Shanzu', 'Siaya', 'Sigacho', 'Taita Taveta', 'Tana River',
-  'Taveta', 'Thika', 'Tharaka Nithi', 'Trans Nzoia', 'Turkana',
-  'Uasin Gishu', 'Ukunda', 'Uriri', 'Vihiga', 'Voi', 'Wajir',
-  'Watamu', 'Webuye', 'West Pokot', 'Wundanyi',
+const SOMALI_CITIES = [
+  // Major cities and towns
+  'Mogadishu', 'Hargeisa', 'Kismayo', 'Bosaso', 'Garowe', 'Galkacyo', 'Baidoa', 'Jowhar',
+  'Berbera', 'Las Anod', 'Burao', 'Erigavo', 'Afgooye', 'Wanla Weyn', 'Jalalaqsi', 'Beledweyne',
+  'Buhodle', 'Dhusamareb', 'Guriel', 'Adado', 'El Buur', 'Galgala', 'Caynabo', 'Oodweyne',
+  'Taleex', 'Las Khorey', 'Hingalol', 'Badhan', 'Qardho', 'Haylaan', 'Caluula', 'Baraawe',
+  'Marka', 'Jilib', 'Bardera', 'Sakow', 'Buale', 'Jamaame', 'Afgoye',
+  'Gorowe', 'Qandala', 'Bender Qassim', 'Bender Ziyada', 'Ras Caseyr',
+  'Maydh', 'Xiis', 'Taleh', 'Hadaaftimo', 'Damala Hagare',
+  'El Afweyn', 'Garadag', 'Carmo', 'Buraan', 'Yocob', 'Dhahar', 'Bargaal',
+  'Rako', 'Ras Hafun', 'Hafun', 'Bander Beyla', 'Bander Murcaayo', 'Bander Ziada',
+  'Bender Cassim',
+  // Additional towns and villages
+  'Afmadow', 'Bardhere', 'Dinsor', 'Luuq', 'Wardheer', 'Gebiley', 'Arabsiyo',
+  'Baki', 'Lughaya', 'Zeylac', 'Borama', 'Dilla', 'Aw Barkhadle', 'Sheikh',
+  'Buurhakaba', 'Diinsoor', 'Qansahdhere', 'Baydhaba', 'Doolow',
+  'Beled Hawo', 'Garbaharey', 'El Wak', 'Mandera', 'Takaba', 'Rhamu',
+  'Banisa', 'Moyale', 'Sololo', 'Isiolo', 'Marsabit', 'North Horr', 'Loiyangalani',
 ].sort()
 
 interface Center {
@@ -119,7 +116,7 @@ const EMPTY_FORM = {
   name: '',
   address: '',
   city: '',
-  country: 'Kenya',
+  country: 'Somalia',
   phone: '',
   email: '',
   operating_hours: '',
@@ -543,11 +540,11 @@ export function CentersClient({ centers, admins, inventory, isSuperAdmin }: Cent
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Center Name <span className="text-destructive">*</span></Label>
-              <Input placeholder="Nairobi Blood Bank" value={form.name} onChange={e => updateForm('name', e.target.value)} className="h-10" />
+              <Input placeholder="Galkacyo Blood Bank" value={form.name} onChange={e => updateForm('name', e.target.value)} className="h-10" />
             </div>
             <div className="space-y-2">
               <Label>Address <span className="text-destructive">*</span></Label>
-              <Input placeholder="Hospital Road, Upper Hill" value={form.address} onChange={e => updateForm('address', e.target.value)} className="h-10" />
+              <Input placeholder="Main Street, City Center" value={form.address} onChange={e => updateForm('address', e.target.value)} className="h-10" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -557,7 +554,7 @@ export function CentersClient({ centers, admins, inventory, isSuperAdmin }: Cent
                     <SelectValue placeholder="Select city" />
                   </SelectTrigger>
                   <SelectContent>
-                    {KENYAN_CITIES.map(city => (
+                    {SOMALI_CITIES.map(city => (
                       <SelectItem key={city} value={city}>{city}</SelectItem>
                     ))}
                   </SelectContent>
@@ -571,11 +568,11 @@ export function CentersClient({ centers, admins, inventory, isSuperAdmin }: Cent
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Phone <span className="text-destructive">*</span></Label>
-                <Input placeholder="+254 20 000 0000" value={form.phone} onChange={e => updateForm('phone', e.target.value)} className="h-10" />
+                <Input placeholder="+252 60 000 0000" value={form.phone} onChange={e => updateForm('phone', e.target.value)} className="h-10" />
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input type="email" placeholder="center@bloodlink.co.ke" value={form.email} onChange={e => updateForm('email', e.target.value)} className="h-10" />
+                <Input type="email" placeholder="center@bloodlink.so" value={form.email} onChange={e => updateForm('email', e.target.value)} className="h-10" />
               </div>
             </div>
             <div className="space-y-2">
@@ -585,11 +582,11 @@ export function CentersClient({ centers, admins, inventory, isSuperAdmin }: Cent
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label className="flex items-center gap-1"><Globe size={12} /> Latitude</Label>
-                <Input type="number" step="any" placeholder="-1.2921" value={form.latitude} onChange={e => updateForm('latitude', e.target.value)} className="h-10" />
+                <Input type="number" step="any" placeholder="8.4758" value={form.latitude} onChange={e => updateForm('latitude', e.target.value)} className="h-10" />
               </div>
               <div className="space-y-2">
                 <Label className="flex items-center gap-1"><Globe size={12} /> Longitude</Label>
-                <Input type="number" step="any" placeholder="36.8219" value={form.longitude} onChange={e => updateForm('longitude', e.target.value)} className="h-10" />
+                <Input type="number" step="any" placeholder="48.4667" value={form.longitude} onChange={e => updateForm('longitude', e.target.value)} className="h-10" />
               </div>
             </div>
           </div>
@@ -627,7 +624,7 @@ export function CentersClient({ centers, admins, inventory, isSuperAdmin }: Cent
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {KENYAN_CITIES.map(city => (
+                    {SOMALI_CITIES.map(city => (
                       <SelectItem key={city} value={city}>{city}</SelectItem>
                     ))}
                   </SelectContent>

@@ -5,10 +5,11 @@ import { toast } from 'sonner'
 import {
   UserCog, Plus, Search, MoreHorizontal,
   Pencil, Trash2, PowerOff, Power,
-  Building2, Phone, MapPin, Mail,
+  Building2, Phone, MapPin, Mail, Key,
   Loader2, ShieldCheck, ShieldOff, Shield
 } from 'lucide-react'
 import { createAdmin, toggleAdminStatus, deleteAdmin, updateAdmin } from '@/app/actions/admin-actions'
+import { changeAdminPassword } from '@/app/actions/admin-password-actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -69,8 +70,11 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
   const [showCreate, setShowCreate] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
+  const [showPasswordChange, setShowPasswordChange] = useState(false)
   const [selectedAdmin, setSelectedAdmin] = useState<Profile | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   const updateForm = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -160,6 +164,37 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
         setSelectedAdmin(null)
       }
     })
+  }
+
+  const handlePasswordChange = () => {
+    if (!selectedAdmin) return
+    if (!newPassword || newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters long')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords do not match')
+      return
+    }
+    startTransition(async () => {
+      const result = await changeAdminPassword(selectedAdmin.id, newPassword)
+      if (result.error) {
+        toast.error(result.error)
+      } else {
+        toast.success(`Password changed for ${selectedAdmin.full_name}`)
+        setShowPasswordChange(false)
+        setSelectedAdmin(null)
+        setNewPassword('')
+        setConfirmPassword('')
+      }
+    })
+  }
+
+  const openPasswordChange = (admin: Profile) => {
+    setSelectedAdmin(admin)
+    setNewPassword('')
+    setConfirmPassword('')
+    setShowPasswordChange(true)
   }
 
   const openEdit = (admin: Profile) => {
@@ -312,6 +347,12 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
                             : <><Power size={14} className="mr-2 text-green-600" /> Activate</>
                           }
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => openPasswordChange(admin)}
+                          className="cursor-pointer"
+                        >
+                          <Key size={14} className="mr-2" /> Change password
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => openDelete(admin)}
@@ -427,7 +468,7 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
               <div className="space-y-2">
                 <Label>Phone</Label>
                 <Input
-                  placeholder="+254 700 000 000"
+                  placeholder="+252 60 000 0000"
                   value={form.phone}
                   onChange={(e) => updateForm('phone', e.target.value)}
                   className="h-10"
@@ -436,7 +477,7 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
               <div className="space-y-2">
                 <Label>Location</Label>
                 <Input
-                  placeholder="Nairobi"
+                  placeholder="Galkacyo"
                   value={form.location}
                   onChange={(e) => updateForm('location', e.target.value)}
                   className="h-10"
@@ -554,7 +595,7 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
               <div className="space-y-2">
                 <Label>Phone</Label>
                 <Input
-                  placeholder="+254 700 000 000"
+                  placeholder="+252 60 000 0000"
                   value={form.phone}
                   onChange={(e) => updateForm('phone', e.target.value)}
                   className="h-10"
@@ -563,7 +604,7 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
               <div className="space-y-2">
                 <Label>Location</Label>
                 <Input
-                  placeholder="Nairobi"
+                  placeholder="Galkacyo"
                   value={form.location}
                   onChange={(e) => updateForm('location', e.target.value)}
                   className="h-10"
@@ -634,6 +675,61 @@ export function ManageAdminsClient({ admins, centers }: ManageAdminsClientProps)
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── PASSWORD CHANGE DIALOG ── */}
+      <Dialog open={showPasswordChange} onOpenChange={setShowPasswordChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key size={18} className="text-blue-600" />
+              Change Admin Password
+            </DialogTitle>
+            <DialogDescription>
+              Change the password for {selectedAdmin?.full_name} ({selectedAdmin?.email})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                disabled={isPending}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm Password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={isPending}
+              />
+            </div>
+            <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-sm text-blue-700">
+              <strong>Note:</strong> The admin will need to use the new password to log in next time.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordChange(false)} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePasswordChange}
+              disabled={isPending || !newPassword || !confirmPassword}
+              className="gap-2"
+            >
+              {isPending && <Loader2 size={14} className="animate-spin" />}
+              Change Password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -9,7 +9,7 @@ import {
   User, Building2, Phone, Mail,
   ChevronDown, RefreshCw, Zap
 } from 'lucide-react'
-import { updateRequestStatus } from '@/app/actions/request-actions'
+import { updateRequestStatus, deleteRequest } from '@/app/actions/request-actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -114,6 +114,7 @@ export function RequestsClient({ requests, centers, isSuperAdmin }: RequestsClie
   const [showApprove, setShowApprove] = useState(false)
   const [showReject, setShowReject] = useState(false)
   const [showFulfill, setShowFulfill] = useState(false)
+  const [showDelete, setShowDelete] = useState(false)
   const [notes, setNotes] = useState('')
   const [selectedCenter, setSelectedCenter] = useState('')
 
@@ -153,8 +154,7 @@ export function RequestsClient({ requests, centers, isSuperAdmin }: RequestsClie
       const result = await updateRequestStatus(
         selected.id,
         'approved',
-        notes || undefined,
-        normalizedCenter
+        notes || undefined
       )
       if (result.error) {
         toast.error(result.error)
@@ -205,7 +205,21 @@ export function RequestsClient({ requests, centers, isSuperAdmin }: RequestsClie
     })
   }
 
-  const openAction = (req: Request, action: 'approve' | 'reject' | 'fulfill' | 'detail') => {
+  const handleDelete = () => {
+    if (!selected) return
+    startTransition(async () => {
+      const result = await deleteRequest(selected.id)
+      if (result.error) {
+        toast.error(result.error)
+      } else {
+        toast.success('Request deleted permanently')
+        setShowDelete(false)
+        setSelected(null)
+      }
+    })
+  }
+
+  const openAction = (req: Request, action: 'approve' | 'reject' | 'fulfill' | 'detail' | 'delete') => {
     setSelected(req)
     setNotes('')
     setSelectedCenter(req.center_id ?? '')
@@ -213,6 +227,7 @@ export function RequestsClient({ requests, centers, isSuperAdmin }: RequestsClie
     if (action === 'reject')  setShowReject(true)
     if (action === 'fulfill') setShowFulfill(true)
     if (action === 'detail')  setShowDetail(true)
+    if (action === 'delete')  setShowDelete(true)
   }
 
   return (
@@ -409,6 +424,16 @@ export function RequestsClient({ requests, centers, isSuperAdmin }: RequestsClie
                             <XCircle size={13} />
                           </Button>
                         </>
+                      )}
+                      {isSuperAdmin && (
+                        <Button
+                          variant="ghost" size="icon"
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => openAction(req, 'delete')}
+                          disabled={isPending}
+                        >
+                          <XCircle size={13} />
+                        </Button>
                       )}
                       {req.status === 'approved' && (
                         <Button
@@ -667,6 +692,46 @@ export function RequestsClient({ requests, centers, isSuperAdmin }: RequestsClie
             >
               {isPending && <Loader2 size={14} className="animate-spin" />}
               Confirm Fulfillment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── DELETE DIALOG ── */}
+      <Dialog open={showDelete} onOpenChange={setShowDelete}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <XCircle size={18} /> Delete Request
+            </DialogTitle>
+            <DialogDescription>
+              This will permanently delete the blood request from {selected?.requester?.full_name} for {selected?.blood_type} blood.
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
+              <strong>Warning:</strong> This will permanently remove the request and all associated data.
+            </div>
+            {selected && (
+              <div className="space-y-2 text-sm">
+                <div><strong>Patient:</strong> {selected.patient_name}</div>
+                <div><strong>Hospital:</strong> {selected.hospital_name}</div>
+                <div><strong>Blood Type:</strong> {selected.blood_type}</div>
+                <div><strong>Units:</strong> {selected.units_needed}</div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDelete(false)} disabled={isPending}>Cancel</Button>
+            <Button
+              onClick={handleDelete}
+              disabled={isPending}
+              variant="destructive"
+              className="gap-2"
+            >
+              {isPending && <Loader2 size={14} className="animate-spin" />}
+              Delete Permanently
             </Button>
           </DialogFooter>
         </DialogContent>

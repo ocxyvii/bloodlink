@@ -137,7 +137,7 @@ export function ProfileClient({ profile }: { profile: Profile }) {
               <MapPin size={13} className="text-muted-foreground" /> City / Location
             </Label>
             <Input
-              placeholder="Nairobi"
+              placeholder="Galkacyo"
               value={form.location}
               onChange={e => updateForm('location', e.target.value)}
               className="h-10"
