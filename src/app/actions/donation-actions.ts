@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 export async function scheduleDonation(data: {
   center_id: string
   donation_date: string
+  units_donated: number
   notes?: string
 }) {
   const supabase = await createClient()
@@ -29,7 +30,7 @@ export async function scheduleDonation(data: {
       donor_id: user.id,
       center_id: data.center_id,
       blood_type: profile.blood_type,
-      units_donated: 1,
+      units_donated: Math.min(3, data.units_donated),
       donation_date: data.donation_date,
       status: 'scheduled',
       notes: data.notes || null,

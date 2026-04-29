@@ -91,8 +91,13 @@ export function RequestBloodClient({
   }
 
   const handleSubmit = () => {
-    if (!form.blood_type || !form.hospital_name || !form.patient_name) {
+    if (!form.blood_type || !form.units_needed || !form.hospital_name || !form.patient_name) {
       toast.error('Please fill in all required fields')
+      return
+    }
+
+    if (parseInt(form.units_needed) > 200) {
+      toast.error('Maximum request amount is 200 units')
       return
     }
 
@@ -274,7 +279,7 @@ export function RequestBloodClient({
                 <Input
                   type="number"
                   min="1"
-                  max="20"
+                  max="200"
                   value={form.units_needed}
                   onChange={e => updateForm('units_needed', e.target.value)}
                   className="h-10 text-center text-lg font-bold w-20 flex-shrink-0"
@@ -286,7 +291,7 @@ export function RequestBloodClient({
                   className="h-10 w-10 rounded-xl flex-shrink-0"
                   onClick={() =>
                     updateForm('units_needed',
-                      String(Math.min(20, parseInt(form.units_needed) + 1))
+                      String(Math.min(200, parseInt(form.units_needed) + 1))
                     )
                   }
                 >

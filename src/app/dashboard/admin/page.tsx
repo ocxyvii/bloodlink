@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BloodTypeBadge } from '@/components/ui/blood-type-badge'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Badge } from '@/components/ui/badge'
+import { debugInventoryDiscrepancy } from '@/app/actions/inventory-debug'
+import { comprehensiveSystemDebug } from '@/app/actions/comprehensive-debug'
+import { CleanupButtons } from '@/components/admin/cleanup-buttons'
 
 export default async function AdminOverview() {
   const supabase = await createClient()
@@ -21,7 +24,7 @@ export default async function AdminOverview() {
     .from('blood_requests')
     .select('*, requester:profiles(full_name)')
     .order('created_at', { ascending: false })
-    .limit(6)
+    .limit(20)
 
   const donationsQuery = supabase
     .from('donations')
@@ -66,6 +69,7 @@ export default async function AdminOverview() {
             <span className="text-muted-foreground text-sm">
               Showing data for <strong className="text-foreground">{center.name}</strong> — {center.city}
             </span>
+            <CleanupButtons />
           </div>
         ) : (
           <p className="text-muted-foreground mt-1 text-sm">

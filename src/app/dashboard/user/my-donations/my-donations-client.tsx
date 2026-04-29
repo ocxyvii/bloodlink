@@ -61,7 +61,7 @@ export function MyDonationsClient({
   const [showSchedule, setShowSchedule] = useState(false)
   const [showCancel, setShowCancel] = useState(false)
   const [selected, setSelected] = useState<Donation | null>(null)
-  const [form, setForm] = useState({ center_id: '', donation_date: '', notes: '' })
+  const [form, setForm] = useState({ center_id: '', donation_date: '', notes: '', units_donated: '1' })
 
   const completed  = donations.filter(d => d.status === 'completed').length
   const scheduled  = donations.filter(d => d.status === 'scheduled').length
@@ -70,6 +70,10 @@ export function MyDonationsClient({
   const handleSchedule = () => {
     if (!form.center_id || !form.donation_date) {
       toast.error('Please select a center and date')
+      return
+    }
+    if (parseInt(form.units_donated) > 3) {
+      toast.error('Maximum donation amount is 3 units')
       return
     }
     const date = new Date(form.donation_date)
@@ -81,6 +85,7 @@ export function MyDonationsClient({
       const result = await scheduleDonation({
         center_id: form.center_id,
         donation_date: form.donation_date,
+        units_donated: parseInt(form.units_donated),
         notes: form.notes || undefined,
       })
       if (result.error) {
@@ -88,7 +93,7 @@ export function MyDonationsClient({
       } else {
         toast.success('Donation scheduled! Thank you for saving lives 💉')
         setShowSchedule(false)
-        setForm({ center_id: '', donation_date: '', notes: '' })
+        setForm({ center_id: '', donation_date: '', notes: '', units_donated: '1' })
       }
     })
   }
@@ -258,6 +263,18 @@ export function MyDonationsClient({
                 onChange={e => setForm(p => ({ ...p, donation_date: e.target.value }))}
                 className="h-10"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Units to Donate <span className="text-destructive">*</span></Label>
+              <Input
+                type="number"
+                min="1"
+                max="3"
+                value={form.units_donated}
+                onChange={e => setForm(p => ({ ...p, units_donated: e.target.value }))}
+                className="h-10"
+              />
+              <span className="text-sm text-muted-foreground">Max 3 units per donation</span>
             </div>
             <div className="space-y-2">
               <Label>Notes (optional)</Label>

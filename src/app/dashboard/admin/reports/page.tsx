@@ -6,27 +6,35 @@ import { AlertTriangle } from 'lucide-react'
 export default async function ReportsPage() {
   const supabase = await createClient()
   const center = await getAdminCenter()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  // Check if user is super admin
+  const isSuperAdmin = user?.user_metadata?.role === 'super_admin'
 
   const requestsQuery = supabase
     .from('blood_requests')
-    .select('*, requester:profiles(full_name, email)')
+    .select('*')
     .order('created_at', { ascending: false })
 
   const donationsQuery = supabase
     .from('donations')
-    .select('*, donor:profiles(full_name, email), center:blood_centers(name, city)')
+    .select('*')
     .order('created_at', { ascending: false })
 
   const inventoryQuery = supabase
     .from('blood_inventory')
-    .select('*, center:blood_centers(name, city)')
+    .select('*')
     .order('blood_type')
 
-  if (center) {
+  // Apply center filter only for regular admins, super admins see all data
+  if (center && !isSuperAdmin) {
     requestsQuery.eq('center_id', center.id)
     donationsQuery.eq('center_id', center.id)
     inventoryQuery.eq('center_id', center.id)
   }
+
+  // For regular admins: show only their center's data
+  // For super admins: show all data across all centers
 
   const [
     { data: requests },
@@ -40,6 +48,21 @@ export default async function ReportsPage() {
     supabase.from('blood_centers').select('*').eq('is_active', true),
   ])
 
+  // For regular admins: filter requests by their center
+  const filteredRequests = center && !isSuperAdmin 
+    ? requests?.filter(r => r.center_id === center.id) || []
+    : requests || []
+
+  // For regular admins: filter donations by their center
+  const filteredDonations = center && !isSuperAdmin 
+    ? donations?.filter(d => d.center_id === center.id) || []
+    : donations || []
+
+  // For regular admins: filter inventory by their center
+  const filteredInventory = center && !isSuperAdmin 
+    ? inventory?.filter(i => i.center_id === center.id) || []
+    : inventory || []
+
   return (
     <div className="space-y-0">
       {center && (
@@ -51,10 +74,13 @@ export default async function ReportsPage() {
         </div>
       )}
       <ReportsClient
-        requests={requests ?? []}
-        donations={donations ?? []}
-        inventory={inventory ?? []}
-        centers={center ? centers?.filter(c => c.id === center.id) ?? [] : centers ?? []}
+        requests={filteredRequests ?? []}
+        donations={filteredDonations ?? []}
+        inventory={filteredInventory ?? []}
+        centers={isSuperAdmin ? centers ?? [] : center ? centers?.filter(c => c.id === center.id) ?? [] : []}
+        userCenter={center}
+        userRole={user?.user_metadata?.role}
+        isSuperAdmin={isSuperAdmin}
       />
     </div>
   )

@@ -152,7 +152,7 @@ export async function updateRequestStatus(
     requester = requesterData
   }
 
-  // If fulfilled — deduct from inventory
+  // If fulfilled — deduct from inventory (only from available units)
   if (status === 'fulfilled' && request.center_id) {
     const { data: inv } = await adminClient
       .from('blood_inventory')
@@ -166,7 +166,6 @@ export async function updateRequestStatus(
         .from('blood_inventory')
         .update({
           units_available: Math.max(0, inv.units_available - request.units_needed),
-          units_reserved:  Math.max(0, inv.units_reserved  - request.units_needed),
           last_updated:    new Date().toISOString(),
         })
         .eq('center_id', request.center_id)
